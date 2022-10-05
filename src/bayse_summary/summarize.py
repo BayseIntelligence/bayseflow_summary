@@ -1,5 +1,5 @@
 """
-    Copyright 2022 David Pearson (david@bayse.io)
+    Copyright 2022 Bayse, Inc. (maintained by david@bayse.io)
     For license information, please see the accompanying LICENSE file in the top-level directory of this repository.
 """
 import ipaddress
@@ -26,7 +26,6 @@ def collect_data_from_bayseflow_files(filepaths, verbose):
        summarization steps.
     """
     relevant_bayseflow_data = []
-    # TODO: add label to required fields once labeling is complete!
     collected_bayseflow_fields = ["src", "dst", "relativeStart", "duration", "protocolInformation", "label"]
     for p in filepaths:
         path = pathlib.PurePath(p)
@@ -70,7 +69,7 @@ def collect_bayseflow_data_by_direction(summarized_data, absolute_start, baysefl
     """now that we have all of the data we really need, go through all of the collected data and summarize how many
        times we've seen each flow that is North-South or South-North. Ignore the others.
     """
-    if "label" not in bayseflow:  # TEMPORARY to continue testing! TODO: Remove!
+    if "label" not in bayseflow:
         bayseflow["label"] = "placeholder"
     if name_or_ip not in summarized_data[direction]:
         summarized_data[direction][name_or_ip] = dict()
