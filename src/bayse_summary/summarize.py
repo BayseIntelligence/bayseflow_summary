@@ -242,14 +242,18 @@ def upload_stats(summarized_data_location, api_key=None, api_key_environment_var
         return upload_info  # short-circuit here
 
     if not re.match(EXPECTED_FILETYPE_REGEX, magic.from_file(location)):
-        upload_info["errors"] += f"{location} is not a JSON file.\n"
+        try:  # Some OSes fail to capture JSON as JSON, so try to load data. Server-side validates data passed to it.
+            with open(location, "r") as summary_datafile:
+                summary_data = json.load(summary_datafile)
+        except Exception as e:
+            upload_info["errors"] += f"{location} is not a JSON file.\n"
     else:
         try:
             with open(location, "r") as summary_datafile:
                 summary_data = json.load(summary_datafile)
         except Exception as e:
             upload_info["errors"] += f"{e}\n"
-    if summary_data is None:
+    if not summary_data:
         upload_info["errors"] += f"No data found when trying to open and load {summarized_data_location}.\n"
     elif PUBLIC_SOURCES not in summary_data or PUBLIC_DESTINATIONS not in summary_data:
         upload_info["errors"] += f"{PUBLIC_SOURCES} and/or {PUBLIC_DESTINATIONS} missing from " \
