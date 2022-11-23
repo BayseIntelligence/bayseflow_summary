@@ -1,5 +1,5 @@
 """
-    Copyright 2022 David Pearson (david@bayse.io)
+    Copyright 2022 Bayse, Inc. (maintained by david@bayse.io)
     For license information, please see the accompanying LICENSE file in the top-level directory of this repository.
 """
 import ipaddress
@@ -26,7 +26,6 @@ def collect_data_from_bayseflow_files(filepaths, verbose):
        summarization steps.
     """
     relevant_bayseflow_data = []
-    # TODO: add label to required fields once labeling is complete!
     collected_bayseflow_fields = ["src", "dst", "relativeStart", "duration", "protocolInformation", "label"]
     for p in filepaths:
         path = pathlib.PurePath(p)
@@ -70,7 +69,7 @@ def collect_bayseflow_data_by_direction(summarized_data, absolute_start, baysefl
     """now that we have all of the data we really need, go through all of the collected data and summarize how many
        times we've seen each flow that is North-South or South-North. Ignore the others.
     """
-    if "label" not in bayseflow:  # TEMPORARY to continue testing! TODO: Remove!
+    if "label" not in bayseflow:
         bayseflow["label"] = "placeholder"
     if name_or_ip not in summarized_data[direction]:
         summarized_data[direction][name_or_ip] = dict()
@@ -121,6 +120,7 @@ def summarize_bayseflow_files(filepaths, verbose=False):
 
        This data is saved to a timestamped summary.json file, whose filepath is returned to the caller.
     """
+    print(f"YO@! Should definitely see me!")
     relevant_bayseflow_data = collect_data_from_bayseflow_files(filepaths, verbose)
     summarized_data = {PUBLIC_SOURCES: dict(),
                        PUBLIC_DESTINATIONS: dict()
@@ -243,14 +243,30 @@ def upload_stats(summarized_data_location, api_key=None, api_key_environment_var
         return upload_info  # short-circuit here
 
     if not re.match(EXPECTED_FILETYPE_REGEX, magic.from_file(location)):
-        upload_info["errors"] += f"{location} is not a JSON file.\n"
+        try:  # Some OSes fail to capture JSON as JSON, so try to load data. Server-side validates data passed to it.
+            #TODO: Below is temporary stuff to instrument things and determine how best to do split
+            file_stats = os.stat(location)
+            fsize = file_stats.st_size / 1024
+            print(f"File size: {fsize} KB")
+            if fsize > 200:
+                print(f"{location} is too big to upload in one go, so we need to split it up!")
+            with open(location, "r") as summary_datafile:
+                summary_data = json.load(summary_datafile)
+        except Exception as e:
+            upload_info["errors"] += f"{location} is not a JSON file.\n"
     else:
         try:
+            #TODO: Below is temporary stuff to instrument things and determine how best to do split
+            file_stats = os.stat(location)
+            fsize = file_stats.st_size / 1024
+            print(f"File size: {fsize} KB")
+            if fsize > 200:
+                print(f"{location} is too big to upload in one go, so we need to split it up!")
             with open(location, "r") as summary_datafile:
                 summary_data = json.load(summary_datafile)
         except Exception as e:
             upload_info["errors"] += f"{e}\n"
-    if summary_data is None:
+    if not summary_data:
         upload_info["errors"] += f"No data found when trying to open and load {summarized_data_location}.\n"
     elif PUBLIC_SOURCES not in summary_data or PUBLIC_DESTINATIONS not in summary_data:
         upload_info["errors"] += f"{PUBLIC_SOURCES} and/or {PUBLIC_DESTINATIONS} missing from " \
@@ -270,3 +286,8 @@ def upload_stats(summarized_data_location, api_key=None, api_key_environment_var
 if __name__ == "__main__":
     summarize_bayseflow_files(["../../tests/valid_file1.bf", "../../tests/valid_file2.bf", "../../tests/valid_file3.bf",
                                "../../tests/invalid_file1.bf"], verbose=True)
+    fstats = os.stat("../../tests/valid_file1.bf")
+    fsize = fstats.st_size / 1024
+    print(f"File size: {fsize} KB")
+    if fsize > 200:
+        print(f"Yo, need to split file!")
